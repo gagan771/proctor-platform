@@ -5,17 +5,20 @@ import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
-// This action now UPDATES the submission record with the final code
+export async function logSessionEvent(submissionId: number, eventType: string) {
+  const supabase = await createClient();
+  await supabase.from('session_events').insert({
+    submission_id: submissionId,
+    event_type: eventType,
+  });
+}
+
 export async function submitSolution(submissionId: number, code: string) {
-  const supabase = createClient();
-  const { error } = await supabase
+  const supabase = await createClient();
+  await supabase
     .from('submissions')
-    .update({ code: code, status: 'submitted', completed_at: new Date().toISOString() })
+    .update({ code: code, status: 'submitted' })
     .eq('id', submissionId);
-
-  if (error) { console.error('Error updating submission:', error); return; }
-
-  redirect('/exam/completed');
 }
 
 // NEW: This action logs a tab switch event
