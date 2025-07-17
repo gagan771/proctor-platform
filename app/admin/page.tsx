@@ -27,8 +27,8 @@ export default async function AdminPage() {
       <ul>
         {problems?.map((problem) => (
           <li key={problem.id}>
-            {/* This link should point to the verification page */}
-            <Link href={`/exam/${problem.id}`} style={{ color: '#0070f3', textDecoration: 'underline' }}>
+            {/* This link now points directly to the exam session, skipping verification */}
+            <Link href={`/session/${problem.id}`} style={{ color: '#0070f3', textDecoration: 'underline' }}>
               {problem.title}
             </Link>
             {' '}- <strong>{problem.difficulty}</strong>
