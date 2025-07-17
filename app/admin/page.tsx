@@ -4,6 +4,10 @@ import { createClient } from '@/utils/supabase/server';
 import AddProblemForm from './add-problem-form';
 import Link from 'next/link';
 
+// This line forces the page to be rendered dynamically at request time,
+// which resolves the 'cookies() should be awaited' error.
+export const dynamic = 'force-dynamic';
+
 export default async function AdminPage() {
   const supabase = createClient();
 
@@ -27,7 +31,6 @@ export default async function AdminPage() {
       <ul>
         {problems?.map((problem) => (
           <li key={problem.id}>
-            {/* This link now points directly to the exam session, skipping verification */}
             <Link href={`/session/${problem.id}`} style={{ color: '#0070f3', textDecoration: 'underline' }}>
               {problem.title}
             </Link>
