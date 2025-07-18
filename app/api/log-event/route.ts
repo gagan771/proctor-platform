@@ -1,44 +1,32 @@
 // In: app/api/log-event/route.ts
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
-  console.log("--- /api/log-event endpoint hit ---"); // DEBUG
-  
-  const supabase = createClient();
-  
-  // First, check if there's a logged-in user for this request
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    console.log("No user found. Unauthorized."); // DEBUG
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export async function POST(request: NextRequest) {
+  try {
+    const { submissionId, eventType } = await request.json();
+    
+    if (!submissionId || !eventType) {
+      return NextResponse.json({ error: 'Missing submissionId or eventType' }, { status: 400 });
+    }
+
+    const supabase = await createClient();
+    
+    const { error } = await supabase
+      .from('session_events')
+      .insert({
+        submission_id: submissionId,
+        event_type: eventType,
+      });
+
+    if (error) {
+      console.error('Error logging event:', error);
+      return NextResponse.json({ error: 'Failed to log event' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error in log-event API:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-  
-  console.log("User found:", user.id); // DEBUG
-
-  // Get the data sent from the editor component
-  const { submissionId, eventType } = await request.json();
-  console.log("Received data:", { submissionId, eventType }); // DEBUG
-
-  // Basic validation
-  if (!submissionId || !eventType) {
-    return NextResponse.json({ error: 'Missing submissionId or eventType' }, { status: 400 });
-  }
-
-  // Insert the new log into the proctoring_logs table
-  const { error } = await supabase.from('proctoring_logs').insert({
-    submission_id: submissionId,
-    user_id: user.id,
-    event_type: eventType,
-  });
-
-  if (error) {
-    console.error('Error logging event:', error);
-    return NextResponse.json({ error: 'Failed to log event' }, { status: 500 });
-  }
-
-  console.log("Event logged successfully!"); // DEBUG
-  // Send a success response back to the client
-  return NextResponse.json({ success: true });
 }

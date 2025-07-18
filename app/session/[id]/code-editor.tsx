@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import Editor, { OnMount } from '@monaco-editor/react';
-import { submitSolution } from '../actions';
+import { submitSolution, logSessionEvent } from '../actions';
 
 // Define the structure for the boilerplate prop
 interface Boilerplate {
@@ -52,12 +52,22 @@ const languageMap: { [key: string]: number } = {
 };
 
 // The component prop for boilerplateCode is now optional
-export default function CodeEditor({ problemId, submissionId, boilerplateCode }: { problemId: number, submissionId: number, boilerplateCode?: Boilerplate | null }) {
+export default function CodeEditor({ 
+  problemId, 
+  submissionId, 
+  boilerplateCode, 
+  initialCode 
+}: { 
+  problemId: number, 
+  submissionId: number, 
+  boilerplateCode?: Boilerplate | null,
+  initialCode?: string 
+}) {
   const safeBoilerplate = boilerplateCode || {};
   
   // Default to JavaScript if no languages are available from boilerplate
   const [language, setLanguage] = useState('javascript');
-  const [code, setCode] = useState(safeBoilerplate[language] || '// Your code goes here');
+  const [code, setCode] = useState(initialCode || safeBoilerplate[language] || '// Your code goes here');
   
   const [output, setOutput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -65,12 +75,10 @@ export default function CodeEditor({ problemId, submissionId, boilerplateCode }:
   // Proctoring hooks remain unchanged...
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        fetch('/api/log-event', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ submissionId: submissionId, eventType: 'tab_switch' }),
-        });
+      console.log('Visibility changed, document.hidden:', document.hidden);
+      if (document.hidden && submissionId) {
+        console.log('Tab switch detected, logging event...');
+        logSessionEvent(submissionId, 'tab_switch');
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -79,18 +87,14 @@ export default function CodeEditor({ problemId, submissionId, boilerplateCode }:
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC, () => {
-      fetch('/api/log-event', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ submissionId: submissionId, eventType: 'copy_attempt' }),
-      });
+      if (submissionId) {
+        logSessionEvent(submissionId, 'copy_attempt');
+      }
     });
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {
-      fetch('/api/log-event', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ submissionId: submissionId, eventType: 'paste_attempt' }),
-      });
+      if (submissionId) {
+        logSessionEvent(submissionId, 'paste_attempt');
+      }
     });
   };
 
@@ -124,8 +128,8 @@ export default function CodeEditor({ problemId, submissionId, boilerplateCode }:
   const handleSubmit = async () => {
     if (confirm('Are you sure you want to submit?')) {
       setIsLoading(true);
-      // Pass the correct language ID to the submit action
-      await submitSolution(submissionId, code, languageMap[language]);
+      // Pass only the required parameters
+      await submitSolution(submissionId, code);
       setIsLoading(false);
     }
   };

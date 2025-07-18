@@ -1,23 +1,18 @@
-// In: app/admin/page.tsx
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import AddProblemForm from './add-problem-form';
 import Link from 'next/link';
 
-// This line forces the page to be rendered dynamically at request time,
-// which resolves the 'cookies() should be awaited' error.
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
 
-  // Check for user session
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     redirect('/login');
   }
 
-  // Fetch all problems from the database
   const { data: problems } = await supabase.from('problems').select('*');
 
   return (
@@ -39,7 +34,6 @@ export default async function AdminPage() {
         ))}
       </ul>
       
-      {/* Add the form component to the page */}
       <AddProblemForm />
     </div>
   );
